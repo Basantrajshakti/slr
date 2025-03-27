@@ -123,6 +123,9 @@ const Tasks = () => {
           // console.log(userNames);
           setUserNames(userNames);
         }
+
+        const test = await utils.client.tasks.getAllTasks.query();
+        console.log(test, "test-task-get");
       } catch (error) {
         console.log("Error accessing resource:", error);
       }

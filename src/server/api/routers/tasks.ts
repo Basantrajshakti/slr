@@ -76,4 +76,58 @@ export const taskRouter = createTRPCRouter({
 
       return task;
     }),
+  updateTask: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().min(3, "Task ID is required"), // Added ID field
+        title: z.string().min(3, "Title is required"),
+        description: z.string().optional(),
+        deadline: z.date().optional(),
+        priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
+        status: z.enum(["TODO", "DONE", "PENDING", "ONGOING"]).default("TODO"),
+        tags: z
+          .array(
+            z.enum([
+              "DEVELOPMENT",
+              "DESIGN",
+              "TESTING",
+              "REVIEW",
+              "BUG",
+              "FEATURE",
+            ]),
+          )
+          .optional(),
+        assignees: z.array(z.string()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existingTask = await ctx.db.task.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          createdById: true,
+        },
+      });
+
+      if (!existingTask) {
+        throw new Error("Task not found");
+      }
+
+      // Update the task with the new input data
+      const updatedTask = await ctx.db.task.update({
+        where: { id: input.id },
+        data: {
+          title: input.title,
+          description: input.description,
+          deadline: input.deadline,
+          priority: input.priority,
+          status: input.status,
+          tags: input.tags ?? [],
+          assignees: input.assignees ?? [],
+          updatedAt: new Date(),
+        },
+      });
+
+      return updatedTask;
+    }),
 });

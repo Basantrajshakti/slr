@@ -79,7 +79,7 @@ export interface TaskWithCreator {
   id: string; // From Task model: String @id @default(cuid())
   title: string; // From Task model: String
   description: string | null; // From Task model: String? (optional)
-  deadline: Date | null; // From Task model: DateTime? (optional)
+  deadline: Date | undefined; // From Task model: DateTime? (optional)
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; // From TaskPriority enum
   status: "TODO" | "DONE" | "PENDING" | "ONGOING"; // From TaskStatus enum
   tags: ("DEVELOPMENT" | "DESIGN" | "TESTING" | "REVIEW" | "BUG" | "FEATURE")[]; // From TaskTag enum array
@@ -113,6 +113,9 @@ const DEFAULT_ACTIONS = {
 const Tasks = (props: TasksProps) => {
   const { tasks: strTasks, userNames } = props;
   const tasks: TaskWithCreator[] = JSON.parse(strTasks || "[]");
+  const [taskToView, setTaskToView] = useState<TaskWithCreator>(
+    {} as TaskWithCreator,
+  );
 
   const [tasksList, setTasksList] = useState<TaskWithCreator[]>(tasks || []);
 
@@ -121,6 +124,12 @@ const Tasks = (props: TasksProps) => {
   const clearAction = () => {
     setAction(DEFAULT_ACTIONS);
   };
+
+  useEffect(() => {
+    if (action.mode === "view" || action.mode === "edit") {
+      setTaskToView(tasksList.find((task) => task.id === action.id)!);
+    }
+  }, [action, tasksList]);
 
   return (
     <div className={`font-sans ${inter.variable}`}>
@@ -149,6 +158,7 @@ const Tasks = (props: TasksProps) => {
         action={action}
         userNames={userNames}
         tasksList={tasksList}
+        taskToView={taskToView}
         setTasksList={setTasksList}
         clearAction={clearAction}
       />
@@ -200,6 +210,7 @@ interface TaskDialogProps {
   action: Action;
   userNames: string[];
   tasksList: TaskWithCreator[];
+  taskToView: TaskWithCreator;
   setTasksList: React.Dispatch<React.SetStateAction<TaskWithCreator[]>>;
   clearAction: () => void;
 }
@@ -208,6 +219,7 @@ const TaskDialog = ({
   action,
   userNames,
   tasksList,
+  taskToView,
   setTasksList,
   clearAction,
 }: TaskDialogProps) => {
@@ -222,7 +234,6 @@ const TaskDialog = ({
     resolver: zodResolver(taskSchema),
     mode: "onChange",
     defaultValues: {
-      title: "",
       description: "",
       deadline: "",
       priority: "MEDIUM",
@@ -231,6 +242,34 @@ const TaskDialog = ({
       assignees: "",
     },
   });
+
+  useEffect(() => {
+    if (taskToView.id && (action.mode === "edit" || action.mode === "view")) {
+      const deadline = new Date(taskToView.deadline || Date.now())
+        .toISOString()
+        .split("T")[0];
+
+      form.setValue("title", taskToView.title);
+      form.setValue("description", taskToView.description || "");
+      form.setValue("priority", taskToView.priority);
+      form.setValue("status", taskToView.status);
+      form.setValue("tags", taskToView.tags);
+      form.setValue("assignees", taskToView.assignees.join(","));
+      form.setValue("deadline", deadline);
+      form.clearErrors("title");
+    }
+
+    if (!action.mode) {
+      form.setValue("title", "");
+      form.setValue("description", "");
+      form.setValue("priority", "MEDIUM");
+      form.setValue("status", "TODO");
+      form.setValue("tags", []);
+      form.setValue("assignees", "");
+      form.setValue("deadline", "");
+      form.clearErrors("title");
+    }
+  }, [taskToView, action]);
 
   const onSubmit = async (data: TaskFormData) => {
     try {
@@ -241,9 +280,20 @@ const TaskDialog = ({
           ? data.assignees.split(",").map((m) => m.trim())
           : [],
       };
-      const result = (await utils.client.tasks.createTask.mutate(
-        taskData,
-      )) as TaskWithCreator;
+
+      let result: TaskWithCreator = {} as TaskWithCreator;
+      const { mode } = action;
+
+      if (mode === "create") {
+        result = (await utils.client.tasks.createTask.mutate(
+          taskData,
+        )) as TaskWithCreator;
+      } else {
+        result = (await utils.client.tasks.updateTask.mutate({
+          id: taskToView.id,
+          ...taskData,
+        })) as TaskWithCreator;
+      }
 
       if (!result.id) {
         throw new Error("");
@@ -253,9 +303,20 @@ const TaskDialog = ({
         name: session?.data?.user?.name || "",
       };
 
-      setTasksList((prevTask) => [...prevTask, result]);
+      if (mode === "create") {
+        setTasksList((prevTask) => [...prevTask, result]);
+      } else {
+        setTasksList((prevTask) =>
+          prevTask.map((task) => {
+            if (task.id !== result.id) return task;
+            else return result;
+          }),
+        );
+      }
+
       toast.success("Task created successfully!", toastOptions);
       form.reset();
+      clearAction();
       setIsDialogOpen(false);
     } catch (error: unknown) {
       const errorMessage =
@@ -288,6 +349,18 @@ const TaskDialog = ({
     }
   }, [deleteTaskId, clearAction]);
 
+  let submitBtnMessage = "";
+
+  if (action.mode === "view") {
+    submitBtnMessage = "Can't update";
+  } else if (action.mode === "edit") {
+    submitBtnMessage = "Update details";
+  } else if (form.formState.isSubmitting) {
+    submitBtnMessage = "Submitting...";
+  } else {
+    submitBtnMessage = "Create";
+  }
+
   return (
     <>
       {/* Delete Alert */}
@@ -309,7 +382,13 @@ const TaskDialog = ({
       </AlertDialog>
 
       {/* Form */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(val) => {
+          setIsDialogOpen(val);
+          clearAction();
+        }}
+      >
         <DialogContent
           className={`max-h-[90vh] overflow-y-auto font-sans sm:max-w-[625px] ${inter.variable}`}
         >
@@ -341,7 +420,7 @@ const TaskDialog = ({
                   <FormItem>
                     <FormLabel>Deadline</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} />
+                      <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -438,7 +517,7 @@ const TaskDialog = ({
                         </SelectContent>
                       </Select>
                       <div className="mt-2">
-                        {field.value?.split(",").map(
+                        {(field.value || "")?.split(",").map(
                           (assignee) =>
                             assignee.trim() && (
                               <span
@@ -578,9 +657,9 @@ const TaskDialog = ({
               <Button
                 type="submit"
                 className="w-full sm:col-span-2"
-                disabled={form.formState.isSubmitting}
+                disabled={form.formState.isSubmitting || action.mode === "view"}
               >
-                {form.formState.isSubmitting ? "Creating..." : "Create Task"}
+                {submitBtnMessage}
               </Button>
             </form>
           </Form>

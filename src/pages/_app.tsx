@@ -10,7 +10,7 @@ import { useRouter } from "next/router";
 import LoadingSpinner from "~/components/loadingSpinner";
 
 import "~/styles/globals.css";
-import "react-toastify/dist/ReactToastify.css"; // Import CSS for styling
+import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import { useZustandStore } from "~/stores/useLoadingStore";
 

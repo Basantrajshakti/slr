@@ -1,4 +1,3 @@
-import { postRouter } from "~/server/api/routers/post";
 import { createTRPCRouter } from "~/server/api/trpc";
 import { authRouter } from "./routers/auth";
 import { taskRouter } from "./routers/tasks";
@@ -9,7 +8,6 @@ import { taskRouter } from "./routers/tasks";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
-  post: postRouter,
   auth: authRouter,
   tasks: taskRouter,
 });

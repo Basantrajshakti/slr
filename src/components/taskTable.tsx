@@ -97,7 +97,7 @@ const TaskTable = ({
 
               {/* Assignees */}
               <td className="px-4 py-2">
-                <div className="flex -space-x-2">
+                <div className="flex -space-x-2.5">
                   {task.assignees.map((assignee, index) => {
                     const initials = assignee
                       .split(" ")

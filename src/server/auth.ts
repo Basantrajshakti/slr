@@ -9,7 +9,6 @@ import {
 import { type Adapter } from "next-auth/adapters";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-// import { env } from "~/env";
 import { db } from "~/server/db";
 import { hashPassword, verifyPassword } from "~/utils/auth";
 

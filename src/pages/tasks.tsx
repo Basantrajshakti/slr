@@ -74,12 +74,12 @@ const DEFAULT_ACTIONS = {
 
 const Tasks = (props: TasksProps) => {
   const { tasks: strTasks, userNames } = props;
-  const tasks: TaskWithCreator[] = JSON.parse(strTasks || "[]");
+  const tasks: TaskWithCreator[] = JSON.parse(strTasks ?? "[]");
   const [taskToView, setTaskToView] = useState<TaskWithCreator>(
     {} as TaskWithCreator,
   );
 
-  const [tasksList, setTasksList] = useState<TaskWithCreator[]>(tasks || []);
+  const [tasksList, setTasksList] = useState<TaskWithCreator[]>(tasks ?? []);
 
   const [action, setAction] = useState<Action>(DEFAULT_ACTIONS);
 

@@ -1,4 +1,4 @@
-import { Action, TaskWithCreator } from "~/pages/tasks";
+import { type Action, type TaskWithCreator } from "~/pages/tasks";
 import { Button } from "./ui/button";
 
 const TaskTable = ({

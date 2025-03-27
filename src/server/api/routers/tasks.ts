@@ -56,21 +56,21 @@ export const taskRouter = createTRPCRouter({
       } = ctx.session; // Assuming protectedProcedure provides user from session
 
       const user = await ctx.db.user.findUnique({
-        where: { email: email || "" },
+        where: { email: email ?? "" },
         select: { id: true },
       });
 
       // console.log(input);
       const task = await ctx.db.task.create({
         data: {
-          title: input.title || "Task",
+          title: input.title ?? "Task",
           description: input.description,
           deadline: input.deadline,
           priority: input.priority,
           status: input.status,
           tags: input.tags ?? [],
           assignees: input.assignees ?? [],
-          createdById: user?.id || "",
+          createdById: user?.id ?? "",
         },
       });
 

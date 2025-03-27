@@ -18,7 +18,7 @@ const config = {
     defaultLocale: "en",
   },
   eslint: {
-    dirs: [], // Only run ESLint on the 'pages' and 'utils' directories during production builds (next build)
+    dirs: [], // Only run ESLint on the given dirs
   },
 };
 

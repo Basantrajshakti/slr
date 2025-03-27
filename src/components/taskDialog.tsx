@@ -1,5 +1,5 @@
 import {
-  TaskFormData,
+  type TaskFormData,
   taskSchema,
   type Action,
   type TaskWithCreator,
@@ -83,12 +83,12 @@ const TaskDialog = ({
 
   useEffect(() => {
     if (taskToView.id && (action.mode === "edit" || action.mode === "view")) {
-      const deadline = new Date(taskToView.deadline || Date.now())
+      const deadline = new Date(taskToView.deadline ?? Date.now())
         .toISOString()
         .split("T")[0];
 
       form.setValue("title", taskToView.title);
-      form.setValue("description", taskToView.description || "");
+      form.setValue("description", taskToView.description ?? "");
       form.setValue("priority", taskToView.priority);
       form.setValue("status", taskToView.status);
       form.setValue("tags", taskToView.tags);
@@ -107,7 +107,7 @@ const TaskDialog = ({
       form.setValue("deadline", "");
       form.clearErrors("title");
     }
-  }, [taskToView, action]);
+  }, [taskToView, action, form]);
 
   const onSubmit = async (data: TaskFormData) => {
     try {
@@ -138,7 +138,7 @@ const TaskDialog = ({
       }
 
       result.createdBy = {
-        name: session?.data?.user?.name || "",
+        name: session?.data?.user?.name ?? "",
       };
 
       if (mode === "create") {
@@ -162,7 +162,7 @@ const TaskDialog = ({
         error instanceof Error ? error.message : String(error);
       // console.error("Error creating task:", errorMessage);
       toast.error(
-        errorMessage || "Failed to create task. Please try again.",
+        errorMessage ?? "Failed to create task. Please try again.",
         toastOptions,
       );
     }
@@ -198,14 +198,14 @@ const TaskDialog = ({
           error instanceof Error ? error.message : String(error);
         // console.error("Error creating task:", errorMessage);
         toast.error(
-          errorMessage || "Failed to create task. Please try again.",
+          errorMessage ?? "Failed to create task. Please try again.",
           toastOptions,
         );
       }
     };
 
     deleteTask();
-  }, [deleteTaskId, clearAction]);
+  }, [deleteTaskId, clearAction, setTasksList]);
 
   let submitBtnMessage = "";
 
@@ -376,7 +376,7 @@ const TaskDialog = ({
                         </SelectContent>
                       </Select>
                       <div className="mt-2">
-                        {(field.value || "")?.split(",").map(
+                        {(field.value ?? "")?.split(",").map(
                           (assignee) =>
                             assignee.trim() && (
                               <span
@@ -427,7 +427,7 @@ const TaskDialog = ({
                         <FormLabel>Tags</FormLabel>
                         <Select
                           onValueChange={(value: any) => {
-                            const currentTags = field.value || [];
+                            const currentTags = field.value ?? [];
                             if (!currentTags.includes(value)) {
                               field.onChange([...currentTags, value]);
                             }
@@ -496,7 +496,7 @@ const TaskDialog = ({
               <Button
                 type="submit"
                 className="w-full sm:col-span-2"
-                disabled={form.formState.isSubmitting || action.mode === "view"}
+                disabled={form.formState.isSubmitting ?? action.mode === "view"}
               >
                 {submitBtnMessage}
               </Button>

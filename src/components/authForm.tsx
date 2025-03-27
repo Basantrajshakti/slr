@@ -73,7 +73,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ login }) => {
 
       if (result?.error) {
         toast.error(
-          result?.error || "Something went wrong! \nPlease try after sometime",
+          result?.error ?? "Something went wrong! \nPlease try after sometime",
           toastOptions,
         );
         return;
@@ -86,7 +86,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ login }) => {
       void router.replace("/");
     } catch (error: any) {
       toast.error(
-        error?.error || "Something went wrong! \nPlease try after sometime",
+        error?.error ?? "Something went wrong! \nPlease try after sometime",
         toastOptions,
       );
     }

@@ -23,6 +23,7 @@ import {
 import { inter } from "~/pages/_app";
 import { Button } from "./ui/button";
 import { signOut, useSession } from "next-auth/react";
+import Link from "next/link";
 
 const Profile = () => {
   const session = useSession();
@@ -60,10 +61,11 @@ const Profile = () => {
               <b>Email:</b> {session.data?.user?.email}
             </div>
           </div>
-          <SheetFooter>
-            <SheetClose asChild>
-              <Button onClick={() => setLogoutConfirm(true)}>Logout</Button>
-            </SheetClose>
+          <SheetFooter className="absolute bottom-6 flex w-[calc(100%-48px)] !flex-row !justify-between">
+            <Button asChild>
+              <Link href={"/"}>Go To Home</Link>
+            </Button>
+            <Button onClick={() => setLogoutConfirm(true)}>Logout</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

@@ -1,4 +1,4 @@
-import { signIn, signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
@@ -65,16 +65,18 @@ function AuthShowcase() {
       </p>
       <div className="flex gap-5">
         <Button
-          className="font-semibold  no-underline transition "
-          onClick={sessionData ? () => void signOut() : () => void signIn()}
+          asChild
+          className="font-semibold  no-underline transition focus-visible:outline-blue-600"
+          // onClick={sessionData ? () => void signOut() : () => void signIn()}
         >
-          {sessionData ? "Sign out" : "Sign in"}
+          <Link href={"/signin"}>{sessionData ? "Sign out" : "Sign in"}</Link>
         </Button>
         <Button
-          className="font-semibold  no-underline transition "
-          onClick={sessionData ? () => void signOut() : () => void signIn()}
+          asChild
+          className="font-semibold  no-underline transition focus-visible:outline-blue-600"
+          // onClick={sessionData ? () => void signOut() : () => void signIn()}
         >
-          {sessionData ? "Sign out" : "Sign up"}
+          <Link href={"/signup"}>{sessionData ? "Sign out" : "Sign up"}</Link>
         </Button>
       </div>
     </div>

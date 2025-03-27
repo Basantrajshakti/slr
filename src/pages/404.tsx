@@ -30,7 +30,9 @@ const Error = () => {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-2xl font-semibold">Looks like you're lost</h3>
+              <h3 className="text-2xl font-semibold">
+                Looks like you&apos;re lost
+              </h3>
               <p className="text-gray-600">
                 The page you are looking for is not available!
               </p>

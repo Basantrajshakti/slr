@@ -4,7 +4,7 @@ import Head from "next/head";
 import Image from "next/image";
 import { Button } from "~/components/ui/button";
 
-const Error = () => {
+const Custom404 = () => {
   return (
     <>
       <Head>
@@ -47,4 +47,4 @@ const Error = () => {
   );
 };
 
-export default Error;
+export default Custom404;

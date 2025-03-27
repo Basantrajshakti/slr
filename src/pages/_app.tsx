@@ -5,11 +5,14 @@ import { Inter } from "next/font/google";
 
 import { api } from "~/utils/api";
 
-import "~/styles/globals.css";
 import { useLoadingStore } from "~/stores/useLoadingStore";
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import LoadingSpinner from "~/components/loadingSpinner";
+
+import "~/styles/globals.css";
+import "react-toastify/dist/ReactToastify.css"; // Import CSS for styling
+import { ToastContainer } from "react-toastify";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -47,7 +50,9 @@ const MyApp: AppType<{ session: Session | null }> = ({
   return (
     <SessionProvider session={session}>
       {isLoading && <LoadingSpinner />}
+
       <main className={`font-sans ${inter.variable}`}>
+        <ToastContainer />
         <Component {...pageProps} />
       </main>
     </SessionProvider>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,8 +31,11 @@ import { Textarea } from "~/components/ui/textarea";
 import { toast } from "react-toastify";
 import { api } from "~/utils/api";
 import { inter } from "./_app";
-import { useZustandStore } from "~/stores/useLoadingStore";
 import { toastOptions } from "~/constants/helpers";
+import { type GetServerSidePropsContext } from "next";
+import { getSession } from "next-auth/react";
+import { PrismaClient } from "@prisma/client";
+import { type Session } from "next-auth";
 
 // Task schema for validation
 const taskSchema = z.object({
@@ -78,11 +81,19 @@ interface TaskWithCreator {
 
 type TaskFormData = z.infer<typeof taskSchema>;
 
-const Tasks = () => {
+interface TasksProps {
+  session: Session;
+  tasks: string; // Extending Task with createdBy
+  userNames: string[];
+}
+
+const Tasks = (props: TasksProps) => {
+  const { tasks: strTasks, userNames } = props;
+  const tasks: TaskWithCreator[] = JSON.parse(strTasks || "[]");
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { setUserNames, userNames: allAssignees } = useZustandStore();
   const utils = api.useUtils();
-  const [tasksList, setTasksList] = useState<TaskWithCreator[]>([]);
+  const [tasksList, setTasksList] = useState<TaskWithCreator[]>(tasks || []);
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -127,28 +138,6 @@ const Tasks = () => {
       );
     }
   };
-
-  useEffect(() => {
-    async function getAllUsers() {
-      try {
-        const tasks = await utils.client.tasks.getAllTasks.query();
-        if (tasks.length) {
-          console.log(tasks);
-          setTasksList(tasks);
-        }
-
-        const userNames = await utils.client.tasks.getAllUsers.query();
-        if (userNames?.length) {
-          // console.log(userNames);
-          setUserNames(userNames);
-        }
-      } catch (error) {
-        console.log("Error accessing resource:", error);
-      }
-    }
-
-    getAllUsers();
-  }, []);
 
   return (
     <div className={`font-sans ${inter.variable}`}>
@@ -281,7 +270,7 @@ const Tasks = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {allAssignees
+                          {userNames
                             .filter(
                               (assignee) => !field.value?.includes(assignee),
                             )
@@ -447,6 +436,44 @@ const Tasks = () => {
 
 export default Tasks;
 
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession({ req: context.req });
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: "/signin",
+        permanent: false,
+      },
+    };
+  }
+
+  const prisma = new PrismaClient();
+  const tasks = await prisma.task.findMany({
+    include: {
+      createdBy: {
+        select: {
+          name: true, // Include the name of the user who created the task
+        },
+      },
+    },
+  });
+
+  const users = await prisma.user.findMany({
+    select: {
+      name: true,
+    },
+  });
+
+  return {
+    props: {
+      session,
+      tasks: JSON.stringify(tasks),
+      userNames: users.map((user) => user.name),
+    },
+  };
+}
+
 const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
   return (
     <div className="h-[calc(99vh-62px)] overflow-x-auto overflow-y-auto">
@@ -455,13 +482,15 @@ const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
           <tr className="bg-gray-100 text-left text-sm font-semibold text-gray-700">
             <th className="!w-[100px] px-4 py-2">Title</th>
             <th className="px-4 py-2">Description</th>
-            <th className="px-4 py-2">Deadline</th>
+            <th className="min-w-[150px] px-4 py-2">Deadline</th>
             <th className="px-4 py-2">Priority</th>
             <th className="px-4 py-2">Status</th>
             <th className="px-4 py-2">Tags</th>
             <th className="px-4 py-2">Assignees</th>
             <th className="whitespace-nowrap px-4 py-2">Created By</th>
-            <th className="whitespace-nowrap px-4 py-2">Created At</th>
+            <th className="min-w-[150px] whitespace-nowrap px-4 py-2">
+              Created At
+            </th>
             <th className="px-4 py-2">Actions</th>
           </tr>
         </thead>
@@ -482,9 +511,7 @@ const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
 
               {/* Deadline */}
               <td className="px-4 py-2">
-                {task.deadline
-                  ? new Date(task.deadline).toLocaleDateString()
-                  : "N/A"}
+                {task.deadline ? new Date(task.deadline).toDateString() : "N/A"}
               </td>
 
               {/* Priority */}
@@ -563,14 +590,19 @@ const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
 
               {/* Created At */}
               <td className="px-4 py-2">
-                {new Date(task.createdAt).toLocaleDateString()}
+                {new Date(task.createdAt).toDateString()}
               </td>
 
               {/* Created At */}
               <td className="px-4 py-2">
-                <div className="flex gap-1">
+                <div className="flex gap-2">
                   {/* View button */}
-                  <Button className="h-8 rounded-full bg-slate-200 p-2 hover:bg-slate-300">
+                  <Button
+                    onClick={() => {
+                      console.log(task.id);
+                    }}
+                    className="h-8 rounded-full bg-slate-200 p-2 hover:bg-slate-300"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -587,7 +619,12 @@ const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
                     </svg>
                   </Button>
                   {/* Edit button */}
-                  <Button className="h-8 rounded-full bg-slate-200 p-2 hover:bg-slate-300">
+                  <Button
+                    onClick={() => {
+                      console.log(task.id);
+                    }}
+                    className="h-8 rounded-full bg-slate-200 p-2 hover:bg-slate-300"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -601,7 +638,12 @@ const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
                     </svg>
                   </Button>
                   {/* Delete button */}
-                  <Button className="h-8 rounded-full bg-slate-200 p-2 hover:bg-slate-300">
+                  <Button
+                    onClick={() => {
+                      console.log(task.id);
+                    }}
+                    className="h-8 rounded-full bg-slate-200 p-2 hover:bg-slate-300"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"

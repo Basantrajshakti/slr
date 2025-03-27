@@ -55,7 +55,6 @@ function AuthShowcase() {
           <Button
             asChild
             className="font-semibold  no-underline transition focus-visible:outline-blue-600"
-            // onClick={sessionData ? () => void signOut() : () => void signIn()}
           >
             <Link href={"/tasks"}>Tasks</Link>
           </Button>
@@ -65,7 +64,6 @@ function AuthShowcase() {
           <Button
             asChild
             className="font-semibold  no-underline transition focus-visible:outline-blue-600"
-            // onClick={sessionData ? () => void signOut() : () => void signIn()}
           >
             <Link href={"/signin"}>Sign in</Link>
           </Button>

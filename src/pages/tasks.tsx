@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -29,12 +29,9 @@ import {
 } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
 import { toast } from "react-toastify";
-import { Inter } from "next/font/google";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
+import { api } from "~/utils/api";
+import { inter } from "./_app";
+import { useZustandStore } from "~/stores/useLoadingStore";
 
 // Task schema for validation
 const taskSchema = z.object({
@@ -64,6 +61,10 @@ type TaskFormData = z.infer<typeof taskSchema>;
 
 const Tasks = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { setUserNames, userNames: allAssignees } = useZustandStore();
+  const utils = api.useUtils();
+
+  console.log(allAssignees);
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -113,6 +114,22 @@ const Tasks = () => {
       });
     }
   };
+
+  useEffect(() => {
+    async function getAllUsers() {
+      try {
+        const userNames = await utils.client.tasks.getAllUsers.query();
+        if (userNames?.length) {
+          // console.log(userNames);
+          setUserNames(userNames);
+        }
+      } catch (error) {
+        console.log("Error accessing resource:", error);
+      }
+    }
+
+    getAllUsers();
+  }, []);
 
   return (
     <div className={`p-4 font-sans ${inter.variable}`}>
@@ -212,87 +229,163 @@ const Tasks = () => {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="assignees"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assignees</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., john,jane"
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Assignees */}
+              <div className="sm:col-span-2">
+                <FormField
+                  control={form.control}
+                  name="assignees"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assignees</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          const currentAssignees = field.value
+                            ? field.value.split(",").map((a) => a.trim())
+                            : [];
+                          if (!currentAssignees.includes(value)) {
+                            field.onChange(
+                              [...currentAssignees, value].join(","),
+                            );
+                          }
+                        }}
+                        value={undefined} // Multi-select hack
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select assignees" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {allAssignees
+                            .filter(
+                              (assignee) => !field.value?.includes(assignee),
+                            )
+                            .map((assignee) => (
+                              <SelectItem key={assignee} value={assignee}>
+                                {assignee}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="mt-2">
+                        {field.value?.split(",").map(
+                          (assignee) =>
+                            assignee.trim() && (
+                              <span
+                                key={assignee}
+                                className="mb-2 mr-2 inline-flex items-center rounded bg-gray-200 px-2 py-1 text-sm"
+                              >
+                                {assignee}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    field.onChange(
+                                      field.value
+                                        ?.split(",")
+                                        .filter((a) => a.trim() !== assignee)
+                                        .join(","),
+                                    )
+                                  }
+                                  className="ml-1 text-red-600"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 15 15"
+                                  >
+                                    <path
+                                      fill="currentColor"
+                                      d="M3.64 2.27L7.5 6.13l3.84-3.84A.92.92 0 0 1 12 2a1 1 0 0 1 1 1a.9.9 0 0 1-.27.66L8.84 7.5l3.89 3.89A.9.9 0 0 1 13 12a1 1 0 0 1-1 1a.92.92 0 0 1-.69-.27L7.5 8.87l-3.85 3.85A.92.92 0 0 1 3 13a1 1 0 0 1-1-1a.9.9 0 0 1 .27-.66L6.16 7.5L2.27 3.61A.9.9 0 0 1 2 3a1 1 0 0 1 1-1c.24.003.47.1.64.27"
+                                    />
+                                  </svg>
+                                </button>
+                              </span>
+                            ),
+                        )}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               {/* Tags */}
               <div className="sm:col-span-2">
                 <FormField
                   control={form.control}
                   name="tags"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tags</FormLabel>
-                      <Select
-                        onValueChange={(value: any) =>
-                          field.onChange([...(field.value || []), value])
-                        }
-                        value={undefined} // Multi-select hack
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select tags" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="DEVELOPMENT">
-                            Development
-                          </SelectItem>
-                          <SelectItem value="DESIGN">Design</SelectItem>
-                          <SelectItem value="TESTING">Testing</SelectItem>
-                          <SelectItem value="REVIEW">Review</SelectItem>
-                          <SelectItem value="BUG">Bug</SelectItem>
-                          <SelectItem value="FEATURE">Feature</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <div className="mt-2">
-                        {field.value?.map((tag) => (
-                          <span
-                            key={tag}
-                            className="mb-2 mr-2 inline-flex items-center rounded bg-gray-200 px-2 py-1 text-sm"
-                          >
-                            {tag}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                field.onChange(
-                                  field.value?.filter((t) => t !== tag),
-                                )
-                              }
-                              className="ml-1 text-red-600"
+                  render={({ field }) => {
+                    const allTags = [
+                      "DEVELOPMENT",
+                      "DESIGN",
+                      "TESTING",
+                      "REVIEW",
+                      "BUG",
+                      "FEATURE",
+                    ] as const; // Match TaskTag enum
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Tags</FormLabel>
+                        <Select
+                          onValueChange={(value: any) => {
+                            const currentTags = field.value || [];
+                            if (!currentTags.includes(value)) {
+                              field.onChange([...currentTags, value]);
+                            }
+                          }}
+                          value={undefined} // Multi-select hack
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select tags" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {allTags
+                              .filter((tag) => !field.value?.includes(tag))
+                              .map((tag) => (
+                                <SelectItem key={tag} value={tag}>
+                                  {tag}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="mt-2">
+                          {field.value?.map((tag) => (
+                            <span
+                              key={tag}
+                              className="mb-2 mr-2 inline-flex items-center rounded bg-gray-200 px-2 py-1 text-sm"
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="12"
-                                height="12"
-                                viewBox="0 0 15 15"
+                              {tag}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  field.onChange(
+                                    field.value?.filter((t) => t !== tag),
+                                  )
+                                }
+                                className="ml-1 text-red-600"
                               >
-                                <path
-                                  fill="currentColor"
-                                  d="M3.64 2.27L7.5 6.13l3.84-3.84A.92.92 0 0 1 12 2a1 1 0 0 1 1 1a.9.9 0 0 1-.27.66L8.84 7.5l3.89 3.89A.9.9 0 0 1 13 12a1 1 0 0 1-1 1a.92.92 0 0 1-.69-.27L7.5 8.87l-3.85 3.85A.92.92 0 0 1 3 13a1 1 0 0 1-1-1a.9.9 0 0 1 .27-.66L6.16 7.5L2.27 3.61A.9.9 0 0 1 2 3a1 1 0 0 1 1-1c.24.003.47.1.64.27"
-                                />
-                              </svg>
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 15 15"
+                                >
+                                  <path
+                                    fill="currentColor"
+                                    d="M3.64 2.27L7.5 6.13l3.84-3.84A.92.92 0 0 1 12 2a1 1 0 0 1 1 1a.9.9 0 0 1-.27.66L8.84 7.5l3.89 3.89A.9.9 0 0 1 13 12a1 1 0 0 1-1 1a.92.92 0 0 1-.69-.27L7.5 8.87l-3.85 3.85A.92.92 0 0 1 3 13a1 1 0 0 1-1-1a.9.9 0 0 1 .27-.66L6.16 7.5L2.27 3.61A.9.9 0 0 1 2 3a1 1 0 0 1 1-1c.24.003.47.1.64.27"
+                                  />
+                                </svg>
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
               </div>
               {/* Description */}

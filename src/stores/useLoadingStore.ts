@@ -1,23 +1,26 @@
 import { create } from "zustand";
 
-// Define the store's state and actions
-interface LoadingState {
+interface ZustandStore {
   isLoading: boolean;
+  userNames: string[];
   setLoading: (loading: boolean) => void;
   toggleLoading: () => void;
+  setUserNames: (names: string[]) => void;
 }
 
 // Create the store
-export const useLoadingStore = create<LoadingState>((set) => ({
+export const useZustandStore = create<ZustandStore>((set) => ({
   isLoading: false,
+  userNames: [],
   setLoading: (loading) => set({ isLoading: loading }),
   toggleLoading: () => set((state) => ({ isLoading: !state.isLoading })),
+  setUserNames: (names) => set({ userNames: names }),
 }));
 
 // Optional: Utility to use with route changes or async operations
 export const withLoading = async <T>(
   task: Promise<T>,
-  setLoading = useLoadingStore.getState().setLoading,
+  setLoading = useZustandStore.getState().setLoading,
 ): Promise<T> => {
   setLoading(true);
   try {

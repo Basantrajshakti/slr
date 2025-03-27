@@ -5,7 +5,6 @@ import { Inter } from "next/font/google";
 
 import { api } from "~/utils/api";
 
-import { useLoadingStore } from "~/stores/useLoadingStore";
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import LoadingSpinner from "~/components/loadingSpinner";
@@ -13,8 +12,9 @@ import LoadingSpinner from "~/components/loadingSpinner";
 import "~/styles/globals.css";
 import "react-toastify/dist/ReactToastify.css"; // Import CSS for styling
 import { ToastContainer } from "react-toastify";
+import { useZustandStore } from "~/stores/useLoadingStore";
 
-const inter = Inter({
+export const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
 });
@@ -24,8 +24,8 @@ const MyApp: AppType<{ session: Session | null }> = ({
   pageProps: { session, ...pageProps },
 }) => {
   const router = useRouter();
-  const isLoading = useLoadingStore((state) => state.isLoading);
-  const setLoading = useLoadingStore((state) => state.setLoading);
+  const isLoading = useZustandStore((state) => state.isLoading);
+  const setLoading = useZustandStore((state) => state.setLoading);
 
   useEffect(() => {
     const handleStart = (url: string) => {

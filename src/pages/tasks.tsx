@@ -33,7 +33,7 @@ import { api } from "~/utils/api";
 import { inter } from "./_app";
 import { toastOptions } from "~/constants/helpers";
 import { type GetServerSidePropsContext } from "next";
-import { getSession } from "next-auth/react";
+import { getSession, useSession } from "next-auth/react";
 import { PrismaClient } from "@prisma/client";
 import { type Session } from "next-auth";
 
@@ -87,13 +87,24 @@ interface TasksProps {
   userNames: string[];
 }
 
+interface Action {
+  mode: null | "create" | "edit" | "view" | "delete";
+  id: string | null;
+}
+
 const Tasks = (props: TasksProps) => {
   const { tasks: strTasks, userNames } = props;
+  const session = useSession();
   const tasks: TaskWithCreator[] = JSON.parse(strTasks || "[]");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const utils = api.useUtils();
   const [tasksList, setTasksList] = useState<TaskWithCreator[]>(tasks || []);
+
+  const [action, setAction] = useState<Action>({
+    mode: null,
+    id: null,
+  });
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -118,13 +129,19 @@ const Tasks = (props: TasksProps) => {
           ? data.assignees.split(",").map((m) => m.trim())
           : [],
       };
-      const result = await utils.client.tasks.createTask.mutate(taskData);
+      const result = (await utils.client.tasks.createTask.mutate(
+        taskData,
+      )) as TaskWithCreator;
 
       if (!result.id) {
         throw new Error("");
       }
 
-      setTasksList((prevTask) => [...prevTask, result as TaskWithCreator]);
+      result.createdBy = {
+        name: session?.data?.user?.name || "",
+      };
+
+      setTasksList((prevTask) => [...prevTask, result]);
       toast.success("Task created successfully!", toastOptions);
       form.reset();
       setIsDialogOpen(false);
@@ -149,10 +166,11 @@ const Tasks = (props: TasksProps) => {
         {!tasksList.length ? (
           <p className="mt-20 text-center">Oops! No tasks to show</p>
         ) : (
-          <TaskTable tasks={tasksList} />
+          <TaskTable tasks={tasksList} setAction={setAction} />
         )}
       </div>
 
+      {/*  React.Dispatch<React.SetStateAction<boolean> */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent
           className={`max-h-[90vh] overflow-y-auto font-sans sm:max-w-[625px] ${inter.variable}`}
@@ -436,45 +454,13 @@ const Tasks = (props: TasksProps) => {
 
 export default Tasks;
 
-export async function getServerSideProps(context: GetServerSidePropsContext) {
-  const session = await getSession({ req: context.req });
-
-  if (!session) {
-    return {
-      redirect: {
-        destination: "/signin",
-        permanent: false,
-      },
-    };
-  }
-
-  const prisma = new PrismaClient();
-  const tasks = await prisma.task.findMany({
-    include: {
-      createdBy: {
-        select: {
-          name: true, // Include the name of the user who created the task
-        },
-      },
-    },
-  });
-
-  const users = await prisma.user.findMany({
-    select: {
-      name: true,
-    },
-  });
-
-  return {
-    props: {
-      session,
-      tasks: JSON.stringify(tasks),
-      userNames: users.map((user) => user.name),
-    },
-  };
-}
-
-const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
+const TaskTable = ({
+  tasks,
+  setAction,
+}: {
+  tasks: TaskWithCreator[];
+  setAction: React.Dispatch<React.SetStateAction<Action>>;
+}) => {
   return (
     <div className="h-[calc(99vh-62px)] overflow-x-auto overflow-y-auto">
       <table className="min-w-full table-auto border-collapse">
@@ -599,7 +585,10 @@ const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
                   {/* View button */}
                   <Button
                     onClick={() => {
-                      console.log(task.id);
+                      setAction({
+                        mode: "view",
+                        id: task.id,
+                      });
                     }}
                     className="h-8 rounded-full bg-slate-200 p-2 hover:bg-slate-300"
                   >
@@ -621,7 +610,10 @@ const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
                   {/* Edit button */}
                   <Button
                     onClick={() => {
-                      console.log(task.id);
+                      setAction({
+                        mode: "edit",
+                        id: task.id,
+                      });
                     }}
                     className="h-8 rounded-full bg-slate-200 p-2 hover:bg-slate-300"
                   >
@@ -640,7 +632,10 @@ const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
                   {/* Delete button */}
                   <Button
                     onClick={() => {
-                      console.log(task.id);
+                      setAction({
+                        mode: "delete",
+                        id: task.id,
+                      });
                     }}
                     className="h-8 rounded-full bg-slate-200 p-2 hover:bg-slate-300"
                   >
@@ -668,3 +663,41 @@ const TaskTable = ({ tasks }: { tasks: TaskWithCreator[] }) => {
     </div>
   );
 };
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession({ req: context.req });
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: "/signin",
+        permanent: false,
+      },
+    };
+  }
+
+  const prisma = new PrismaClient();
+  const tasks = await prisma.task.findMany({
+    include: {
+      createdBy: {
+        select: {
+          name: true, // Include the name of the user who created the task
+        },
+      },
+    },
+  });
+
+  const users = await prisma.user.findMany({
+    select: {
+      name: true,
+    },
+  });
+
+  return {
+    props: {
+      session,
+      tasks: JSON.stringify(tasks),
+      userNames: users.map((user) => user.name),
+    },
+  };
+}

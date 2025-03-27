@@ -51,18 +51,26 @@ export const taskRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { user } = ctx.session; // Assuming protectedProcedure provides user from session
+      const {
+        user: { email },
+      } = ctx.session; // Assuming protectedProcedure provides user from session
 
+      const user = await ctx.db.user.findUnique({
+        where: { email: email || "" },
+        select: { id: true },
+      });
+
+      // console.log(input);
       const task = await ctx.db.task.create({
         data: {
-          title: input.title,
+          title: input.title || "Task",
           description: input.description,
           deadline: input.deadline,
           priority: input.priority,
           status: input.status,
           tags: input.tags ?? [],
           assignees: input.assignees ?? [],
-          createdById: user.id, // Link task to the authenticated user
+          createdById: user?.id || "",
         },
       });
 

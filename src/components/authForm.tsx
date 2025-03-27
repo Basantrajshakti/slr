@@ -22,9 +22,10 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { toast, type ToastOptions } from "react-toastify";
+import { toast } from "react-toastify";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/router";
+import { toastOptions } from "~/constants/helpers";
 
 // Define Zod schemas
 const signInSchema = z.object({
@@ -61,15 +62,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ login }) => {
 
   // Submit handler
   const onSubmit = async (data: SignUpFormData | SignInFormData) => {
-    const toastOptions: ToastOptions<unknown> | undefined = {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-    };
-
     try {
       const result = await signIn("credentials", {
         redirect: false,

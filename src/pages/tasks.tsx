@@ -32,6 +32,7 @@ import { toast } from "react-toastify";
 import { api } from "~/utils/api";
 import { inter } from "./_app";
 import { useZustandStore } from "~/stores/useLoadingStore";
+import { toastOptions } from "~/constants/helpers";
 
 // Task schema for validation
 const taskSchema = z.object({
@@ -64,8 +65,6 @@ const Tasks = () => {
   const { setUserNames, userNames: allAssignees } = useZustandStore();
   const utils = api.useUtils();
 
-  console.log(allAssignees);
-
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
     mode: "onChange",
@@ -82,7 +81,6 @@ const Tasks = () => {
 
   const onSubmit = async (data: TaskFormData) => {
     try {
-      // Simulate API call (replace with actual tRPC or API call)
       const taskData = {
         ...data,
         deadline: data.deadline ? new Date(data.deadline) : undefined,
@@ -90,28 +88,23 @@ const Tasks = () => {
           ? data.assignees.split(",").map((m) => m.trim())
           : [],
       };
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      console.log("Task submitted:", taskData);
+      const result = await utils.client.tasks.createTask.mutate(taskData);
 
-      toast.success("Task created successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+      if (!result.id) {
+        throw new Error("");
+      }
 
+      toast.success("Task created successfully!", toastOptions);
       form.reset();
       setIsDialogOpen(false);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       console.error("Error creating task:", errorMessage);
-      toast.error(errorMessage || "Failed to create task. Please try again.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
+      toast.error(
+        errorMessage || "Failed to create task. Please try again.",
+        toastOptions,
+      );
     }
   };
 
@@ -124,8 +117,8 @@ const Tasks = () => {
           setUserNames(userNames);
         }
 
-        const test = await utils.client.tasks.getAllTasks.query();
-        console.log(test, "test-task-get");
+        // const test = await utils.client.tasks.getAllTasks.query();
+        // console.log(test, "test-task-get");
       } catch (error) {
         console.log("Error accessing resource:", error);
       }
@@ -135,12 +128,12 @@ const Tasks = () => {
   }, []);
 
   return (
-    <div className={`p-4 font-sans ${inter.variable}`}>
-      <header className="mb-6 flex items-center justify-between">
+    <div className={`font-sans ${inter.variable}`}>
+      <div className="flex items-center justify-between border-b p-2">
         <Button onClick={() => setIsDialogOpen(true)}>New Task</Button>
-      </header>
+      </div>
 
-      <div>Tasks</div>
+      <div className="p-2">Tasks</div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent

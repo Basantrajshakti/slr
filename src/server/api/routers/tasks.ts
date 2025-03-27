@@ -130,4 +130,33 @@ export const taskRouter = createTRPCRouter({
 
       return updatedTask;
     }),
+  deleteTask: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().min(1, "Task ID is required"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existingTask = await ctx.db.task.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          createdById: true,
+        },
+      });
+
+      if (!existingTask) {
+        throw new Error("Task not found");
+      }
+
+      // Delete the task
+      const deletedTask = await ctx.db.task.delete({
+        where: { id: input.id },
+      });
+
+      return {
+        id: deletedTask.id,
+        message: "Task deleted successfully",
+      };
+    }),
 });

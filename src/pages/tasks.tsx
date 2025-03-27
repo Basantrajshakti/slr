@@ -223,8 +223,6 @@ const TaskDialog = ({
   setTasksList,
   clearAction,
 }: TaskDialogProps) => {
-  const setLoading = useZustandStore((state) => state.setLoading);
-
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>();
   const session = useSession();
@@ -305,6 +303,7 @@ const TaskDialog = ({
 
       if (mode === "create") {
         setTasksList((prevTask) => [...prevTask, result]);
+        toast.success("Task created successfully!", toastOptions);
       } else {
         setTasksList((prevTask) =>
           prevTask.map((task) => {
@@ -312,16 +311,16 @@ const TaskDialog = ({
             else return result;
           }),
         );
+        toast.success("Task updated successfully!", toastOptions);
       }
 
-      toast.success("Task created successfully!", toastOptions);
       form.reset();
       clearAction();
       setIsDialogOpen(false);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error("Error creating task:", errorMessage);
+      // console.error("Error creating task:", errorMessage);
       toast.error(
         errorMessage || "Failed to create task. Please try again.",
         toastOptions,
@@ -336,17 +335,36 @@ const TaskDialog = ({
   }, [action]);
 
   useEffect(() => {
-    if (deleteTaskId) {
-      setLoading(true);
-      console.log({ deleteTaskId });
+    if (!deleteTaskId) return;
 
-      setTasksList((prevList) =>
-        prevList.filter((task) => task.id !== deleteTaskId),
-      );
-      setDeleteTaskId("");
-      clearAction();
-      setLoading(false);
-    }
+    const deleteTask = async () => {
+      try {
+        const result = await utils.client.tasks.deleteTask.mutate({
+          id: deleteTaskId,
+        });
+
+        if (!result.id) {
+          throw new Error("");
+        }
+
+        setTasksList((prevList) =>
+          prevList.filter((task) => task.id !== deleteTaskId),
+        );
+        clearAction();
+        setDeleteTaskId("");
+        toast.success("Task deleted successfully!", toastOptions);
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        // console.error("Error creating task:", errorMessage);
+        toast.error(
+          errorMessage || "Failed to create task. Please try again.",
+          toastOptions,
+        );
+      }
+    };
+
+    deleteTask();
   }, [deleteTaskId, clearAction]);
 
   let submitBtnMessage = "";

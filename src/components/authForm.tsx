@@ -22,7 +22,9 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { toast } from "react-toastify";
+import { toast, ToastOptions } from "react-toastify";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/router";
 
 // Define Zod schemas
 const signInSchema = z.object({
@@ -46,31 +48,56 @@ interface AuthFormProps {
 
 export const AuthForm: React.FC<AuthFormProps> = ({ login }) => {
   const schema = login ? signInSchema : signUpSchema;
+  const router = useRouter();
 
   // Initialize the form with React Hook Form
   const form = useForm<SignInFormData | SignUpFormData>({
     resolver: zodResolver(schema),
-    mode: "onChange", // Real-time validation
+    mode: "onChange",
     defaultValues: login
       ? { email: "", password: "" }
       : { name: "", email: "", password: "" },
   });
 
   // Submit handler
-  const onSubmit = async (data: SignInFormData | SignUpFormData) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    console.log("Form submitted:", data);
-
-    // Show success toast with react-toastify
-    toast.success(<div>{`${login ? "Sign In" : "Sign Up"} Successful!`}</div>, {
+  const onSubmit = async (data: SignUpFormData | SignInFormData) => {
+    const toastOptions: ToastOptions<unknown> | undefined = {
       position: "top-right",
       autoClose: 3000,
       hideProgressBar: false,
       closeOnClick: true,
       pauseOnHover: true,
       draggable: true,
-    });
+    };
+
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: data.email,
+        password: data.password,
+        name: (data as SignUpFormData).name,
+        isLogginIn: login,
+      });
+
+      if (result?.error) {
+        toast.error(
+          result?.error || "Something went wrong! \nPlease try after sometime",
+          toastOptions,
+        );
+        return;
+      }
+
+      toast.success(
+        (login ? "Signin" : "Signup") + " successful",
+        toastOptions,
+      );
+      router.replace("/");
+    } catch (error: any) {
+      toast.error(
+        error?.error || "Something went wrong! \nPlease try after sometime",
+        toastOptions,
+      );
+    }
   };
 
   return (

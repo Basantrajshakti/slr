@@ -11,10 +11,40 @@ datasource db {
 }
 
 model User {
-    id            String    @id @default(cuid())
-    name          String
-    email         String    @unique
-    passwordHash  String
-    emailVerified DateTime?
-    image         String?
+    id           String  @id @default(cuid())
+    name         String
+    email        String  @unique
+    passwordHash String
+    image        String?
+    tasks        Task[]
+}
+
+enum TaskPriority {
+    LOW
+    MEDIUM
+    HIGH
+    URGENT
+}
+
+enum TaskTag {
+    DEVELOPMENT
+    DESIGN
+    TESTING
+    REVIEW
+    BUG
+    FEATURE
+}
+
+model Task {
+    id          String       @id @default(cuid())
+    title       String
+    description String? // Optional detailed description
+    deadline    DateTime? // Optional deadline
+    priority    TaskPriority @default(MEDIUM) // Enum for priority
+    tags        TaskTag[] // Array of enums for tags
+    teamMembers String[] // Array of team member names or IDs (stored as strings)
+    createdBy   User         @relation(fields: [createdById], references: [id])
+    createdById String
+    createdAt   DateTime     @default(now())
+    updatedAt   DateTime     @updatedAt
 }

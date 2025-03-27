@@ -57,7 +57,7 @@ function AuthShowcase() {
             className="font-semibold  no-underline transition focus-visible:outline-blue-600"
             // onClick={sessionData ? () => void signOut() : () => void signIn()}
           >
-            <Link href={"/dashboard"}>Dashboard</Link>
+            <Link href={"/tasks"}>Tasks</Link>
           </Button>
         </div>
       ) : (

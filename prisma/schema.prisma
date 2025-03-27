@@ -35,14 +35,22 @@ enum TaskTag {
     FEATURE
 }
 
+enum TaskStatus {
+    TODO
+    DONE
+    PENDING
+    ONGOING
+}
+
 model Task {
     id          String       @id @default(cuid())
     title       String
     description String?
     deadline    DateTime?
     priority    TaskPriority @default(MEDIUM)
+    status      TaskStatus   @default(TODO)
     tags        TaskTag[]
-    teamMembers String[]
+    assignees   String[]
     createdAt   DateTime     @default(now())
     updatedAt   DateTime     @updatedAt
     createdBy   User         @relation(fields: [createdById], references: [id])

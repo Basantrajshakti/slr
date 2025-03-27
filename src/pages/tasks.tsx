@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  // DialogTrigger,
 } from "~/components/ui/dialog";
 import {
   Form,
@@ -31,7 +30,6 @@ import {
 import { Textarea } from "~/components/ui/textarea";
 import { toast } from "react-toastify";
 import { Inter } from "next/font/google";
-import Image from "next/image";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -51,12 +49,15 @@ const taskSchema = z.object({
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"], {
     required_error: "Priority is required",
   }),
+  status: z.enum(["TODO", "DONE", "PENDING", "ONGOING"], {
+    required_error: "Status is required",
+  }),
   tags: z
     .array(
       z.enum(["DEVELOPMENT", "DESIGN", "TESTING", "REVIEW", "BUG", "FEATURE"]),
     )
     .optional(),
-  teamMembers: z.string().optional(), // Will split into array on submit
+  assignees: z.string().optional(), // Will split into array on submit
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -72,8 +73,9 @@ const Tasks = () => {
       description: "",
       deadline: "",
       priority: "MEDIUM",
+      status: "TODO",
       tags: [],
-      teamMembers: "",
+      assignees: "",
     },
   });
 
@@ -83,8 +85,8 @@ const Tasks = () => {
       const taskData = {
         ...data,
         deadline: data.deadline ? new Date(data.deadline) : undefined,
-        teamMembers: data.teamMembers
-          ? data.teamMembers.split(",").map((m) => m.trim())
+        assignees: data.assignees
+          ? data.assignees.split(",").map((m) => m.trim())
           : [],
       };
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -113,7 +115,7 @@ const Tasks = () => {
   };
 
   return (
-    <div className={`p-4 font-sans ${inter.variable} `}>
+    <div className={`p-4 font-sans ${inter.variable}`}>
       <header className="mb-6 flex items-center justify-between">
         <Button onClick={() => setIsDialogOpen(true)}>New Task</Button>
       </header>
@@ -186,10 +188,36 @@ const Tasks = () => {
               />
               <FormField
                 control={form.control}
-                name="teamMembers"
+                name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Team Members</FormLabel>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="TODO">To Do</SelectItem>
+                        <SelectItem value="DONE">Done</SelectItem>
+                        <SelectItem value="PENDING">Pending</SelectItem>
+                        <SelectItem value="ONGOING">Ongoing</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="assignees"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assignees</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., john,jane"
@@ -201,7 +229,7 @@ const Tasks = () => {
                   </FormItem>
                 )}
               />
-              {/* tags */}
+              {/* Tags */}
               <div className="sm:col-span-2">
                 <FormField
                   control={form.control}
@@ -267,7 +295,7 @@ const Tasks = () => {
                   )}
                 />
               </div>
-              {/* Desc */}
+              {/* Description */}
               <div className="sm:col-span-2">
                 <FormField
                   control={form.control}
@@ -286,7 +314,7 @@ const Tasks = () => {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full sm:col-span-2"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting ? "Creating..." : "Create Task"}

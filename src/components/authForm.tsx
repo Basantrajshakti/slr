@@ -22,7 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { toast, ToastOptions } from "react-toastify";
+import { toast, type ToastOptions } from "react-toastify";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/router";
 
@@ -91,7 +91,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ login }) => {
         (login ? "Signin" : "Signup") + " successful",
         toastOptions,
       );
-      router.replace("/");
+      void router.replace("/");
     } catch (error: any) {
       toast.error(
         error?.error || "Something went wrong! \nPlease try after sometime",

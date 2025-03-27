@@ -22,6 +22,7 @@ const Custom404 = () => {
                 fill
                 className="object-contain pt-6"
                 priority
+                unoptimized
                 quality={85}
               />
               <h1 className=" absolute left-1/2 top-0 -translate-x-1/2 text-center text-5xl font-extrabold tracking-tight drop-shadow-lg sm:text-7xl">

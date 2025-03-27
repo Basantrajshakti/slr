@@ -3,11 +3,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
 
-import { api } from "~/utils/api";
-
 export default function Home() {
-  const hello = api.post.hello.useQuery({ text: "from tRPC" });
-
   return (
     <>
       <Head>
@@ -38,9 +34,6 @@ export default function Home() {
             </Link>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <p className="text-2xl ">
-              {hello.data ? hello.data.greeting : "Loading tRPC query..."}
-            </p>
             <AuthShowcase />
           </div>
         </div>
@@ -52,33 +45,39 @@ export default function Home() {
 function AuthShowcase() {
   const { data: sessionData } = useSession();
 
-  const { data: secretMessage } = api.post.getSecretMessage.useQuery(
-    undefined, // no input
-    { enabled: sessionData?.user !== undefined },
-  );
-
   return (
     <div className="flex flex-col items-center justify-center gap-4">
       <p className="text-center text-2xl ">
-        {sessionData && <span>Logged in as {sessionData.user?.name}</span>}
-        {secretMessage && <span> - {secretMessage}</span>}
+        {sessionData && <span>Hello {sessionData.user?.name}</span>}
       </p>
-      <div className="flex gap-5">
-        <Button
-          asChild
-          className="font-semibold  no-underline transition focus-visible:outline-blue-600"
-          // onClick={sessionData ? () => void signOut() : () => void signIn()}
-        >
-          <Link href={"/signin"}>{sessionData ? "Sign out" : "Sign in"}</Link>
-        </Button>
-        <Button
-          asChild
-          className="font-semibold  no-underline transition focus-visible:outline-blue-600"
-          // onClick={sessionData ? () => void signOut() : () => void signIn()}
-        >
-          <Link href={"/signup"}>{sessionData ? "Sign out" : "Sign up"}</Link>
-        </Button>
-      </div>
+      {sessionData ? (
+        <div className="flex gap-5">
+          <Button
+            asChild
+            className="font-semibold  no-underline transition focus-visible:outline-blue-600"
+            // onClick={sessionData ? () => void signOut() : () => void signIn()}
+          >
+            <Link href={"/dashboard"}>Dashboard</Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="flex gap-5">
+          <Button
+            asChild
+            className="font-semibold  no-underline transition focus-visible:outline-blue-600"
+            // onClick={sessionData ? () => void signOut() : () => void signIn()}
+          >
+            <Link href={"/signin"}>Sign in</Link>
+          </Button>
+          <Button
+            asChild
+            className="font-semibold  no-underline transition focus-visible:outline-blue-600"
+            // onClick={sessionData ? () => void signOut() : () => void signIn()}
+          >
+            <Link href={"/signup"}>Sign up</Link>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -204,7 +204,9 @@ const TaskDialog = ({
       }
     };
 
-    deleteTask();
+    (async () => {
+      await deleteTask();
+    })();
   }, [deleteTaskId, clearAction, setTasksList]);
 
   let submitBtnMessage = "";

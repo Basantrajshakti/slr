@@ -498,7 +498,7 @@ const TaskDialog = ({
               <Button
                 type="submit"
                 className="w-full sm:col-span-2"
-                disabled={form.formState.isSubmitting ?? action.mode === "view"}
+                disabled={form.formState.isSubmitting || action.mode === "view"}
               >
                 {submitBtnMessage}
               </Button>

@@ -135,14 +135,260 @@ In the project directory, you can run:
 └── tsconfig.json          # TypeScript configuration
 ```
 
-## API Endpoints
+## API Documentation
 
-The app uses tRPC for API communication. Key procedures are defined in `src/server/api/routers/tasks.ts`:
+The application uses [tRPC](https://trpc.io) for type-safe API communication between the client and server. The API is defined in `src/server/api/routers/tasks.ts` and is protected by authentication via NextAuth.js (using `protectedProcedure`). Below are the available endpoints and how to use them.
 
-- **Create Task**: `createTask` - Creates a new task.
-- **Update Task**: `updateTask` - Updates an existing task by ID.
-- **Delete Task**: `deleteTask` - Deletes a task by ID.
-- **Get All Tasks**: `getAllTasks` - Fetches all tasks.
+### Task Router (`taskRouter`)
+
+The `taskRouter` provides the following procedures for managing tasks and users:
+
+#### 1. `getAllUsers`
+
+- **Type**: Query
+- **Description**: Retrieves a list of all user names in the system. Useful for populating assignee dropdowns.
+- **Input**: None
+- **Output**: `string[]` - An array of user names.
+- **Example Usage** (Client-side):
+
+  ```typescript
+  import { api } from "~/utils/api";
+
+  const { data: userNames, isLoading } = api.tasks.getAllUsers.useQuery();
+  console.log(userNames); // ["User One", "User Two", ...]
+  ```
+
+#### 2. `getAllTasks`
+
+- **Type**: Query
+- **Description**: Fetches all tasks with their creator's name. Returns a list of tasks including details like title, description, priority, etc.
+- **Input**: None
+- **Output**: `TaskWithCreator[]` - An array of task objects with the following shape:
+  ```typescript
+  interface TaskWithCreator {
+    id: string;
+    title: string;
+    description: string | null;
+    deadline: Date | null;
+    priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+    status: "TODO" | "DONE" | "PENDING" | "ONGOING";
+    tags: (
+      | "DEVELOPMENT"
+      | "DESIGN"
+      | "TESTING"
+      | "REVIEW"
+      | "BUG"
+      | "FEATURE"
+    )[];
+    assignees: string[];
+    createdAt: Date;
+    updatedAt: Date;
+    createdById: string;
+    createdBy: { name: string };
+  }
+  ```
+- **Example Usage** (Client-side):
+
+  ```typescript
+  import { api } from "~/utils/api";
+
+  const { data: tasks, isLoading } = api.tasks.getAllTasks.useQuery();
+  console.log(tasks); // [{ id: "1", title: "Test Task", createdBy: { name: "User One" }, ... }, ...]
+  ```
+
+#### 3. `createTask`
+
+- **Type**: Mutation
+- **Description**: Creates a new task. The task is associated with the authenticated user (via `createdById`).
+- **Input**:
+  ```typescript
+  {
+    title: string; // Required, min length 1
+    description?: string; // Optional
+    deadline?: Date; // Optional
+    priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; // Defaults to "MEDIUM"
+    status?: "TODO" | "DONE" | "PENDING" | "ONGOING"; // Defaults to "TODO"
+    tags?: ("DEVELOPMENT" | "DESIGN" | "TESTING" | "REVIEW" | "BUG" | "FEATURE")[]; // Optional
+    assignees?: string[]; // Optional, array of user emails or names
+  }
+  ```
+- **Output**: The created `Task` object (matches `TaskWithCreator` but without `createdBy` relation).
+- **Example Usage** (Client-side):
+
+  ```typescript
+  import { api } from "~/utils/api";
+
+  const mutation = api.tasks.createTask.useMutation({
+    onSuccess: (newTask) => {
+      console.log("Task created:", newTask);
+    },
+  });
+
+  mutation.mutate({
+    title: "New Task",
+    description: "Task description",
+    deadline: new Date("2025-04-01"),
+    priority: "HIGH",
+    status: "TODO",
+    tags: ["DEVELOPMENT"],
+    assignees: ["user1@example.com"],
+  });
+  ```
+
+#### 4. `updateTask`
+
+- **Type**: Mutation
+- **Description**: Updates an existing task by its ID. Only the task's creator can update it (implicitly enforced by session).
+- **Input**:
+  ```typescript
+  {
+    id: string; // Required, task ID to update
+    title: string; // Required, min length 3
+    description?: string; // Optional
+    deadline?: Date; // Optional
+    priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; // Defaults to "MEDIUM"
+    status?: "TODO" | "DONE" | "PENDING" | "ONGOING"; // Defaults to "TODO"
+    tags?: ("DEVELOPMENT" | "DESIGN" | "TESTING" | "REVIEW" | "BUG" | "FEATURE")[]; // Optional
+    assignees?: string[]; // Optional
+  }
+  ```
+- **Output**: The updated `Task` object.
+- **Example Usage** (Client-side):
+
+  ```typescript
+  import { api } from "~/utils/api";
+
+  const mutation = api.tasks.updateTask.useMutation({
+    onSuccess: (updatedTask) => {
+      console.log("Task updated:", updatedTask);
+    },
+  });
+
+  mutation.mutate({
+    id: "task-id-123",
+    title: "Updated Task",
+    priority: "URGENT",
+    status: "ONGOING",
+  });
+  ```
+
+#### 5. `deleteTask`
+
+- **Type**: Mutation
+- **Description**: Deletes a task by its ID. Only the task's creator can delete it (implicitly enforced by session).
+- **Input**:
+  ```typescript
+  {
+    id: string; // Required, task ID to delete
+  }
+  ```
+- **Output**:
+  ```typescript
+  {
+    id: string; // Deleted task ID
+    message: string; // Success message
+  }
+  ```
+- **Example Usage** (Client-side):
+
+  ```typescript
+  import { api } from "~/utils/api";
+
+  const mutation = api.tasks.deleteTask.useMutation({
+    onSuccess: (result) => {
+      console.log(result.message); // "Task deleted successfully"
+    },
+  });
+
+  mutation.mutate({ id: "task-id-123" });
+  ```
+
+### Authentication
+
+All procedures are protected (`protectedProcedure`), meaning they require an authenticated user session via NextAuth.js. The session is available in the `ctx.session` object, which provides the user's `email` to link tasks to their creator.
+
+### Client-Side Integration
+
+The tRPC client is set up in `src/utils/api.ts`. Import and use it as shown in the examples above. The `useQuery` hook is used for queries (`getAllUsers`, `getAllTasks`), and `useMutation` is used for mutations (`createTask`, `updateTask`, `deleteTask`).
+
+#### Example Component
+
+```typescript
+import { api } from "~/utils/api";
+
+export const TaskList = () => {
+  const { data: tasks, isLoading } = api.tasks.getAllTasks.useQuery();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (!tasks) return <div>No tasks found</div>;
+
+  return (
+    <ul>
+      {tasks.map((task) => (
+        <li key={task.id}>{task.title} - {task.createdBy.name}</li>
+      ))}
+    </ul>
+  );
+};
+```
+
+---
+
+## API Documentation - Summaries
+
+The application uses [tRPC](https://trpc.io) for type-safe API communication. The API is defined in `src/server/api/routers/tasks.ts` and requires authentication via NextAuth.js.
+
+### Available Endpoints
+
+#### `getAllUsers`
+
+- **Type**: Query
+- **Description**: Fetches all user names.
+- **Returns**: `string[]`
+- **Usage**: `api.tasks.getAllUsers.useQuery()`
+
+#### `getAllTasks`
+
+- **Type**: Query
+- **Description**: Fetches all tasks with creator details.
+- **Returns**: `TaskWithCreator[]`
+- **Usage**: `api.tasks.getAllTasks.useQuery()`
+
+#### `createTask`
+
+- **Type**: Mutation
+- **Description**: Creates a new task.
+- **Input**: `{ title: string, description?: string, deadline?: Date, priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT", status?: "TODO" | "DONE" | "PENDING" | "ONGOING", tags?: string[], assignees?: string[] }`
+- **Returns**: Created task object
+- **Usage**: `api.tasks.createTask.useMutation()`
+
+#### `updateTask`
+
+- **Type**: Mutation
+- **Description**: Updates an existing task.
+- **Input**: `{ id: string, title: string, description?: string, deadline?: Date, priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT", status?: "TODO" | "DONE" | "PENDING" | "ONGOING", tags?: string[], assignees?: string[] }`
+- **Returns**: Updated task object
+- **Usage**: `api.tasks.updateTask.useMutation()`
+
+#### `deleteTask`
+
+- **Type**: Mutation
+- **Description**: Deletes a task by ID.
+- **Input**: `{ id: string }`
+- **Returns**: `{ id: string, message: string }`
+- **Usage**: `api.tasks.deleteTask.useMutation()`
+
+### Client-Side Usage
+
+## Import the tRPC client from `~/utils/api` and use hooks like `useQuery` for queries and `useMutation` for mutations. See the [tRPC documentation](https://trpc.io/docs) for more details.
+
+### Notes
+
+- **Type Safety**: The examples leverage tRPC's type inference, so the client automatically knows the input/output shapes.
+- **Error Handling**: Add `onError` callbacks to mutations for better UX (e.g., showing toast notifications).
+- **Adjustments**: If your `TaskWithCreator` type differs slightly, update the documentation accordingly.
+
+This should give developers a clear understanding of how to interact with your API! Let me know if you need more details or examples.
 
 Authentication is handled via NextAuth at `/api/auth`.
 
